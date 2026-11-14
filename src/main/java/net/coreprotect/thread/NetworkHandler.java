@@ -34,7 +34,8 @@ import net.coreprotect.config.ConfigHandler;
 import net.coreprotect.language.Language;
 import net.coreprotect.language.Phrase;
 import net.coreprotect.utility.Chat;
-import net.coreprotect.utility.Util;
+import net.coreprotect.utility.VersionUtils;
+import net.coreprotect.utility.ErrorReporter;
 
 public class NetworkHandler extends Language implements Runnable {
 
@@ -42,6 +43,7 @@ public class NetworkHandler extends Language implements Runnable {
     private boolean background = false;
     private boolean translate = true;
     private static String latestVersion = null;
+    private static String latestEdgeVersion = null;
     private static String donationKey = null;
 
     public NetworkHandler(boolean startup, boolean background) {
@@ -51,6 +53,10 @@ public class NetworkHandler extends Language implements Runnable {
 
     public static String latestVersion() {
         return latestVersion;
+    }
+
+    public static String latestEdgeVersion() {
+        return latestEdgeVersion;
     }
 
     public static String donationKey() {
@@ -122,7 +128,7 @@ public class NetworkHandler extends Language implements Runnable {
                     }
                 }
                 catch (Exception e) {
-                    e.printStackTrace();
+                    ErrorReporter.report(e);
                 }
             }
             catch (Exception e) {
@@ -137,7 +143,7 @@ public class NetworkHandler extends Language implements Runnable {
                 try {
                     String lang = Config.getGlobal().LANGUAGE;
                     String languageCode = lang.trim().toLowerCase();
-                    String pluginVersion = Util.getPluginVersion();
+                    String pluginVersion = VersionUtils.getPluginVersion();
 
                     if (!languageCode.startsWith("en") && languageCode.length() > 1) {
                         boolean validCache = false;
@@ -169,7 +175,7 @@ public class NetworkHandler extends Language implements Runnable {
                                 }
                             }
                             catch (Exception e) {
-                                e.printStackTrace();
+                                ErrorReporter.report(e);
                             }
                         }
 
@@ -268,7 +274,7 @@ public class NetworkHandler extends Language implements Runnable {
                     translate = false;
                 }
                 catch (Exception e) {
-                    e.printStackTrace();
+                    ErrorReporter.report(e);
                 }
             }
 
@@ -282,10 +288,13 @@ public class NetworkHandler extends Language implements Runnable {
 
             while (ConfigHandler.serverRunning) {
                 int status = 0;
+                int statusEdge = 0;
                 HttpURLConnection connection = null;
-                String version = Util.getPluginVersion();
+                HttpURLConnection connectionEdge = null;
+                String version = VersionUtils.getPluginVersion();
 
                 try {
+                    // CoreProtect Community Edition
                     URL url = new URL("http://update.coreprotect.net/version/");
                     connection = (HttpURLConnection) url.openConnection();
                     connection.setRequestMethod("GET");
@@ -296,6 +305,18 @@ public class NetworkHandler extends Language implements Runnable {
                     connection.setConnectTimeout(5000);
                     connection.connect();
                     status = connection.getResponseCode();
+
+                    // CoreProtect Edge
+                    url = new URL("http://update.coreprotect.net/version-edge/");
+                    connectionEdge = (HttpURLConnection) url.openConnection();
+                    connectionEdge.setRequestMethod("GET");
+                    connectionEdge.setRequestProperty("Accept-Charset", "UTF-8");
+                    connectionEdge.setRequestProperty("User-Agent", "CoreProtect/v" + version + " (by Intelli)");
+                    connectionEdge.setDoOutput(true);
+                    connectionEdge.setInstanceFollowRedirects(true);
+                    connectionEdge.setConnectTimeout(5000);
+                    connectionEdge.connect();
+                    statusEdge = connectionEdge.getResponseCode();
                 }
                 catch (Exception e) {
                     // Unable to connect to update.coreprotect.net
@@ -309,7 +330,7 @@ public class NetworkHandler extends Language implements Runnable {
                         if (response.length() > 0 && response.length() < 10) {
                             String remoteVersion = response.replaceAll("[^0-9.]", "");
                             if (remoteVersion.contains(".")) {
-                                boolean newVersion = Util.newVersion(version, remoteVersion);
+                                boolean newVersion = VersionUtils.newVersion(version, remoteVersion);
                                 if (newVersion) {
                                     latestVersion = remoteVersion;
                                     if (startup) {
@@ -329,7 +350,32 @@ public class NetworkHandler extends Language implements Runnable {
                         reader.close();
                     }
                     catch (Exception e) {
-                        e.printStackTrace();
+                        ErrorReporter.report(e);
+                    }
+                }
+
+                if (statusEdge == 200) {
+                    try {
+                        BufferedReader reader = new BufferedReader(new InputStreamReader(connectionEdge.getInputStream()));
+                        String response = reader.readLine();
+
+                        if (response.length() > 0 && response.length() < 10) {
+                            String remoteVersion = response.replaceAll("[^0-9.]", "");
+                            if (remoteVersion.contains(".")) {
+                                boolean newVersion = VersionUtils.newVersion(version, remoteVersion);
+                                if (newVersion) {
+                                    latestEdgeVersion = remoteVersion;
+                                }
+                                else {
+                                    latestEdgeVersion = null;
+                                }
+                            }
+                        }
+
+                        reader.close();
+                    }
+                    catch (Exception e) {
+                        ErrorReporter.report(e);
                     }
                 }
 
@@ -367,7 +413,7 @@ public class NetworkHandler extends Language implements Runnable {
         }
         catch (Exception e) {
             Chat.console(Phrase.build(Phrase.UPDATE_ERROR));
-            e.printStackTrace();
+            ErrorReporter.report(e);
         }
     }
 }

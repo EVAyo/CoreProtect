@@ -8,6 +8,7 @@ import net.coreprotect.config.Config;
 import net.coreprotect.config.ConfigHandler;
 import net.coreprotect.database.Database;
 import net.coreprotect.patch.Patch;
+import net.coreprotect.utility.ErrorReporter;
 
 public class __2_16_0 {
 
@@ -53,7 +54,7 @@ public class __2_16_0 {
                     query = "SELECT rowid as id FROM " + ConfigHandler.prefix + "block WHERE type IN(" + idList + ") AND y='0'";
                     String preparedQueryDelete = "DELETE FROM " + ConfigHandler.prefix + "block WHERE rowid = ?";
                     PreparedStatement preparedStatementDelete = statement.getConnection().prepareStatement(preparedQueryDelete);
-                    Database.beginTransaction(statement);
+                    Database.beginTransaction(statement, Config.getGlobal().MYSQL);
                     resultSet = statement.executeQuery(query);
                     while (resultSet.next()) {
                         int rowid = resultSet.getInt("id");
@@ -61,11 +62,11 @@ public class __2_16_0 {
                         preparedStatementDelete.executeUpdate();
                     }
                     resultSet.close();
-                    Database.commitTransaction(statement);
+                    Database.commitTransaction(statement, Config.getGlobal().MYSQL);
                 }
             }
             catch (Exception e) {
-                e.printStackTrace();
+                ErrorReporter.report(e);
             }
 
             if (!Patch.continuePatch()) {
@@ -78,7 +79,7 @@ public class __2_16_0 {
             PreparedStatement preparedStatementSelect = statement.getConnection().prepareStatement(preparedQuerySelect);
             PreparedStatement preparedStatementDelete = statement.getConnection().prepareStatement(preparedQueryDelete);
 
-            Database.beginTransaction(statement);
+            Database.beginTransaction(statement, Config.getGlobal().MYSQL);
             ResultSet resultSet = statement.executeQuery(query);
             while (resultSet.next()) {
                 int rowid = resultSet.getInt("id");
@@ -96,10 +97,10 @@ public class __2_16_0 {
                 }
             }
             resultSet.close();
-            Database.commitTransaction(statement);
+            Database.commitTransaction(statement, Config.getGlobal().MYSQL);
         }
         catch (Exception e) {
-            e.printStackTrace();
+            ErrorReporter.report(e);
         }
 
         return true;

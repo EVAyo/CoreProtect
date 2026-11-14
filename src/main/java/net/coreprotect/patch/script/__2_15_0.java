@@ -7,6 +7,7 @@ import java.sql.Statement;
 import net.coreprotect.config.Config;
 import net.coreprotect.config.ConfigHandler;
 import net.coreprotect.database.Database;
+import net.coreprotect.utility.ErrorReporter;
 
 public class __2_15_0 {
 
@@ -23,7 +24,7 @@ public class __2_15_0 {
             String preparedQuery = "UPDATE " + ConfigHandler.prefix + "material_map SET material = ? WHERE rowid = ?";
             PreparedStatement preparedStatement = statement.getConnection().prepareStatement(preparedQuery);
 
-            Database.beginTransaction(statement);
+            Database.beginTransaction(statement, Config.getGlobal().MYSQL);
             ResultSet rs = statement.executeQuery(query);
             while (rs.next()) {
                 int rowid = rs.getInt("id");
@@ -36,7 +37,7 @@ public class __2_15_0 {
                 }
             }
             rs.close();
-            Database.commitTransaction(statement);
+            Database.commitTransaction(statement, Config.getGlobal().MYSQL);
 
             try {
                 if (Config.getGlobal().MYSQL) {
@@ -53,7 +54,7 @@ public class __2_15_0 {
             ConfigHandler.loadTypes(statement);
         }
         catch (Exception e) {
-            e.printStackTrace();
+            ErrorReporter.report(e);
         }
 
         return true;

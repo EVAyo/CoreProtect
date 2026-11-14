@@ -18,7 +18,7 @@ import org.bukkit.event.block.BlockPistonRetractEvent;
 import net.coreprotect.config.Config;
 import net.coreprotect.consumer.Queue;
 import net.coreprotect.thread.CacheHandler;
-import net.coreprotect.utility.Util;
+import net.coreprotect.utility.WorldUtils;
 
 public final class BlockPistonListener extends Queue implements Listener {
 
@@ -32,7 +32,8 @@ public final class BlockPistonListener extends Queue implements Listener {
         }
 
         World world = event.getBlock().getWorld();
-        if (Config.getConfig(world).PISTONS && !event.isCancelled()) {
+        Config config = Config.getConfig(world);
+        if (config.PISTONS && !event.isCancelled()) {
             List<Block> nblocks = new ArrayList<>();
             List<Block> blocks = new ArrayList<>();
 
@@ -45,9 +46,10 @@ public final class BlockPistonListener extends Queue implements Listener {
             Block b = event.getBlock();
             BlockFace d = event.getDirection();
             Block bm = b.getRelative(d);
-            int wid = Util.getWorldId(bm.getWorld().getName());
+            int wid = WorldUtils.getWorldId(bm.getWorld().getName());
 
             int unixtimestamp = (int) (System.currentTimeMillis() / 1000L);
+            boolean duplicateSuppression = config.DUPLICATE_SUPPRESSION;
             int log = 0;
             int l = 0;
             while (l <= nblocks.size()) {
@@ -65,10 +67,12 @@ public final class BlockPistonListener extends Queue implements Listener {
                     int z = n.getZ();
                     Material t = n.getType();
                     String cords = "" + x + "." + y + "." + z + "." + wid + "." + t.name() + "";
-                    if (CacheHandler.pistonCache.get(cords) == null) {
+                    if (!duplicateSuppression || CacheHandler.pistonCache.get(cords) == null) {
                         log = 1;
                     }
-                    CacheHandler.pistonCache.put(cords, new Object[] { unixtimestamp });
+                    if (duplicateSuppression) {
+                        CacheHandler.pistonCache.put(cords, new Object[] { unixtimestamp });
+                    }
                 }
                 l++;
             }

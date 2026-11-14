@@ -15,8 +15,11 @@ import org.bukkit.entity.Painting;
 import org.bukkit.inventory.ItemStack;
 
 import net.coreprotect.bukkit.BukkitAdapter;
+import net.coreprotect.config.ConfigHandler;
 import net.coreprotect.model.BlockGroup;
-import net.coreprotect.utility.Util;
+import net.coreprotect.utility.BlockUtils;
+import net.coreprotect.utility.MaterialUtils;
+import net.coreprotect.utility.ErrorReporter;
 
 public class HangingUtil {
 
@@ -38,7 +41,7 @@ public class HangingUtil {
                     hangingFace = BlockFace.valueOf(hangingData.split("=")[1].toUpperCase(Locale.ROOT));
                 }
                 catch (Exception e) {
-                    e.printStackTrace();
+                    ErrorReporter.report(e);
                 }
             }
 
@@ -79,16 +82,16 @@ public class HangingUtil {
                     block = c4;
                 }
 
-                if (!Util.solidBlock(Util.getType(block.getRelative(BlockFace.EAST)))) {
+                if (!BlockUtils.solidBlock(BlockUtils.getType(block.getRelative(BlockFace.EAST)))) {
                     face = BlockFace.EAST;
                 }
-                else if (!Util.solidBlock(Util.getType(block.getRelative(BlockFace.NORTH)))) {
+                else if (!BlockUtils.solidBlock(BlockUtils.getType(block.getRelative(BlockFace.NORTH)))) {
                     face = BlockFace.NORTH;
                 }
-                else if (!Util.solidBlock(Util.getType(block.getRelative(BlockFace.WEST)))) {
+                else if (!BlockUtils.solidBlock(BlockUtils.getType(block.getRelative(BlockFace.WEST)))) {
                     face = BlockFace.WEST;
                 }
-                else if (!Util.solidBlock(Util.getType(block.getRelative(BlockFace.SOUTH)))) {
+                else if (!BlockUtils.solidBlock(BlockUtils.getType(block.getRelative(BlockFace.SOUTH)))) {
                     face = BlockFace.SOUTH;
                 }
             }
@@ -99,8 +102,12 @@ public class HangingUtil {
 
             if (faceSet != null && face != null) {
                 if (rowType.equals(Material.PAINTING)) {
-                    String name = Util.getArtName(rowData);
-                    Art painting = Art.getByName(name.toUpperCase(Locale.ROOT));
+                    String name = MaterialUtils.getArtName(rowData);
+                    Art painting = BukkitAdapter.ADAPTER.getPaintingArt(name);
+                    if (painting == null) {
+                        return;
+                    }
+
                     int height = painting.getBlockHeight();
                     int width = painting.getBlockWidth();
                     int paintingX = x;
@@ -123,7 +130,16 @@ public class HangingUtil {
                     }
                     Block spawnBlock = hangingFace != null ? block : block.getRelative(face);
                     if (hangingFace == null) {
-                        Util.setTypeAndData(spawnBlock, Material.AIR, null, true);
+                        BlockUtils.setTypeAndData(spawnBlock, Material.AIR, null, true);
+                    }
+                    if (ConfigHandler.isFolia) {
+                        // Folia does not support Entity#teleport, so the painting is placed at its target before it is added to the world
+                        BlockFace facing = faceSet;
+                        BukkitAdapter.ADAPTER.spawn(block.getWorld(), block.getWorld().getBlockAt(paintingX, paintingY, paintingZ).getLocation(), Painting.class, spawned -> {
+                            spawned.setFacingDirection(facing, true);
+                            spawned.setArt(painting, true);
+                        });
+                        return;
                     }
                     Painting hanging = null;
                     try {
@@ -141,16 +157,28 @@ public class HangingUtil {
                     try {
                         Block spawnBlock = hangingFace != null ? block : block.getRelative(face);
                         if (hangingFace == null) {
-                            Util.setTypeAndData(spawnBlock, Material.AIR, null, true);
+                            BlockUtils.setTypeAndData(spawnBlock, Material.AIR, null, true);
                         }
                         Class itemFrame = BukkitAdapter.ADAPTER.getFrameClass(rowType);
+                        if (ConfigHandler.isFolia) {
+                            // Folia does not support Entity#teleport, so the frame is placed at its target before it is added to the world
+                            BlockFace facing = faceSet;
+                            Material frameItem = MaterialUtils.getType(rowData);
+                            BukkitAdapter.ADAPTER.spawn(block.getWorld(), block.getWorld().getBlockAt(x, y, z).getLocation(), (Class<? extends ItemFrame>) itemFrame, spawned -> {
+                                spawned.setFacingDirection(facing, true);
+                                if (frameItem != null) {
+                                    spawned.setItem(new ItemStack(frameItem, 1));
+                                }
+                            });
+                            return;
+                        }
                         Entity entity = block.getWorld().spawn(spawnBlock.getLocation(), itemFrame);
                         if (entity instanceof ItemFrame) {
                             ItemFrame hanging = (ItemFrame) entity;
                             hanging.teleport(block.getWorld().getBlockAt(x, y, z).getLocation());
                             hanging.setFacingDirection(faceSet, true);
 
-                            Material type = Util.getType(rowData);
+                            Material type = MaterialUtils.getType(rowData);
                             if (type != null) {
                                 ItemStack istack = new ItemStack(type, 1);
                                 hanging.setItem(istack);
@@ -163,7 +191,7 @@ public class HangingUtil {
             }
         }
         catch (Exception e) {
-            e.printStackTrace();
+            ErrorReporter.report(e);
         }
     }
 
@@ -175,7 +203,7 @@ public class HangingUtil {
                     hangingFace = BlockFace.valueOf(hangingData.split("=")[1].toUpperCase(Locale.ROOT));
                 }
                 catch (Exception e) {
-                    e.printStackTrace();
+                    ErrorReporter.report(e);
                 }
             }
 
@@ -191,7 +219,7 @@ public class HangingUtil {
             }
         }
         catch (Exception e) {
-            e.printStackTrace();
+            ErrorReporter.report(e);
         }
     }
 

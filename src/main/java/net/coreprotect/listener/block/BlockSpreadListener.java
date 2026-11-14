@@ -15,6 +15,7 @@ import net.coreprotect.consumer.Queue;
 import net.coreprotect.model.BlockGroup;
 import net.coreprotect.thread.CacheHandler;
 import net.coreprotect.utility.Util;
+import net.coreprotect.utility.WorldUtils;
 
 public final class BlockSpreadListener extends Queue implements Listener {
 
@@ -34,10 +35,11 @@ public final class BlockSpreadListener extends Queue implements Listener {
 
         BlockState blockstate = event.getNewState();
         Material type = blockstate.getType();
+        Config config = Config.getConfig(event.getBlock().getWorld());
 
-        if (Config.getConfig(event.getBlock().getWorld()).VINE_GROWTH && (BlockGroup.VINES.contains(type) || BlockGroup.AMETHYST.contains(type) || type == Material.CHORUS_FLOWER || type == Material.BAMBOO)) {
+        if (config.VINE_GROWTH && (BlockGroup.VINES.contains(type) || BlockGroup.AMETHYST.contains(type) || type == Material.CHORUS_FLOWER || type == Material.BAMBOO)) {
             Block block = event.getBlock();
-            if (checkCacheData(block, type)) {
+            if (config.DUPLICATE_SUPPRESSION && checkCacheData(block, type)) {
                 return;
             }
 
@@ -71,9 +73,9 @@ public final class BlockSpreadListener extends Queue implements Listener {
                 Queue.queueBlockPlaceDelayed("#bamboo", block.getLocation(), type, null, block.getState(), 0);
             }
         }
-        else if (Config.getConfig(event.getBlock().getWorld()).SCULK_SPREAD && BlockGroup.SCULK.contains(type)) {
+        else if (config.SCULK_SPREAD && BlockGroup.SCULK.contains(type)) {
             Block block = event.getBlock();
-            if (checkCacheData(block, type)) {
+            if (config.DUPLICATE_SUPPRESSION && checkCacheData(block, type)) {
                 return;
             }
 
@@ -82,7 +84,7 @@ public final class BlockSpreadListener extends Queue implements Listener {
     }
 
     private boolean checkCacheData(Block block, Material type) {
-        String cacheId = block.getX() + "." + block.getY() + "." + block.getZ() + "." + Util.getWorldId(block.getWorld().getName());
+        String cacheId = block.getX() + "." + block.getY() + "." + block.getZ() + "." + WorldUtils.getWorldId(block.getWorld().getName());
         Location location = block.getLocation();
         int timestamp = (int) (System.currentTimeMillis() / 1000L);
         Object[] cacheData = CacheHandler.spreadCache.get(cacheId);
