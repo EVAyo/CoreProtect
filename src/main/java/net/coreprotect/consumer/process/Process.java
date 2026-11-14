@@ -995,7 +995,8 @@ public class Process {
                 if (object instanceof Location && userData != null && userData.length > 0 && userData[0] != null
                         && failedEvent.length > 6 && failedEvent[6] instanceof Integer) {
                     if (action == CONTAINER_TRANSACTION) {
-                        ContainerTransactionProcess.discard(processId, failedIndex, (int) failedEvent[6], userData[0], (Location) object);
+                        Material type = failedEvent[2] instanceof Material ? (Material) failedEvent[2] : null;
+                        ContainerTransactionProcess.discard(processId, failedIndex, type, (int) failedEvent[6], userData[0], (Location) object);
                     }
                     else if (action == ITEM_TRANSACTION) {
                         ItemTransactionProcess.discard((int) failedEvent[6], userData[0], (Location) object);
@@ -1042,7 +1043,8 @@ public class Process {
         if (action == CONTAINER_TRANSACTION && location.getWorld() == null) {
             return null;
         }
-        String candidate = action == CONTAINER_TRANSACTION ? HopperTransactionUtils.getLoggingId(userData[0], location)
+        Material type = data[2] instanceof Material ? (Material) data[2] : null;
+        String candidate = action == CONTAINER_TRANSACTION ? HopperTransactionUtils.getLoggingId(userData[0], type, location)
                 : ItemTransactionProcess.getLoggingId(userData[0], location);
         return loggingId.equals(candidate) ? (Integer) data[6] : null;
     }
